@@ -1,0 +1,61 @@
+public with sharing class GoogleMapControllerExtension {
+    
+    public String PrintasPdf { get; set; }
+    
+    public GoogleMapControllerExtension() {
+        
+    }
+    
+    public static string sqlTemplate='' +
+        'SELECT id ' +
+        ',name ' +
+        ',parentid' + 
+        ',mdr_account_name__c ' +
+        ',mdr_district_name__c ' +
+        ',mdr_enrollment__c ' +
+        ',contract_end__c ' +
+        ',mdr_geo_location__longitude__s ' +
+        ',mdr_geo_location__latitude__s ' +
+        ',MDR_Type__c ' +
+        ',type ' +
+        ',district_contract_end__c ' +
+        ',customer_type__c ' +
+        'FROM   account ' +
+        'WHERE  ' +
+        'mdr_geo_location__latitude__s <> NULL '+
+        'AND mdr_geo_location__longitude__s <> NULL '+
+        'AND customer_type__c <> NULL ' +
+        'AND recordtype.developername=\'customer\' ';
+        //'AND Owner_Is_Me__c =1.0'; 
+    
+    
+    
+    
+    @RemoteAction
+        public static List<Account> getNearbyAccounts(Decimal latitude, Decimal longitude) {
+            String q = sqlTemplate;
+            //if(BillCity!=NULL)
+            //{
+            //    q += ' and BillingCity='+BillCity;
+           // }
+            q += ' AND DISTANCE(mdr_geo_location__c, GEOLOCATION( ';
+            q += String.valueOf(latitude) + ', ' + String.valueOf(longitude);
+            q += ' ), \'mi\') < 30';
+             return Database.query(q);                
+        }       
+    
+    public GoogleMapControllerExtension(ApexPages.StandardController controller) {
+        
+    }
+    public static  string setQuery { get;set;}
+    
+    @RemoteAction  
+        public static List<Account> SearchAcccounts(string AddedFilters)
+    {
+        string sqlAll=sqlTemplate + AddedFilters + ' LIMIT 250 ';  
+        setQuery=sqlAll;   
+        return Database.Query(sqlAll);
+    }
+    
+    
+}
