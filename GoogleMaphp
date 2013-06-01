@@ -1,0 +1,950 @@
+<apex:page standardcontroller="Account" extensions="GoogleMapControllerExtension" sidebar="false" readonly="true" showheader="false" standardstylesheets="false">
+    <head>
+        <!-- Bootstrap -->
+        <apex:includescript value="{!$Resource.jquery1_10_0_min}"/>
+        <link href="//netdna.bootstrapcdn.com/twitter-bootstrap/2.3.1/css/bootstrap-combined.no-icons.min.css" rel="stylesheet" media="screen"/>
+        <link href="//netdna.bootstrapcdn.com/font-awesome/3.1.1/css/font-awesome.css" rel="stylesheet" media="screen"/>
+        <link href="{!URLFOR($Resource.BootStrap, 'css/bootstrap.min.css')}" rel="stylesheet" media="screen"/>
+        <apex:includescript value="{!$Resource.bootstrap_selectjs}"/>
+        <apex:includescript value="{!URLFOR($Resource.BootStrap, 'js/bootstrap.min.js')}"/>
+        <apex:includescript value="{!$Resource.bootstrapbutton}"/>
+        <apex:includescript value="{!$Resource.bootstrap_selectjs}"/>
+        <link href="{!URLFOR($Resource.bootstrap_select)}" rel="stylesheet" media="screen"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+        <style>
+            
+            .divider{
+            width:50px;
+            height:auto;
+            display:inline-block;
+}
+            
+            .sidebar-nav {
+            padding: 9px 0;
+            }
+            #mapCanvas img {
+            max-width: none;
+            max-height: none;
+            }
+            #toggleSidebar {
+            position:fixed;
+            left:0;
+            top:45px;
+            color:#779DD7;
+            padding:2px 4px;
+            padding-top:5px;
+            }
+            .loading
+            {
+            position: absolute;
+            display: none;
+            border: 1px solid #F8F8F8;
+            padding: 2px;
+            background-color: #F8F8F8;
+            color:#969696; /*opacity: 0.50;*/ /* for IE */ /*filter:alpha(opacity=50);*/
+            -webkit-border-radius: 5px;
+            -moz-border-radius: 5px;
+            width: 300px;
+            height: 30px;
+            text-align: left;
+            position: absolute;
+            top: 120px;
+            left: 180px;     
+            font-size: 10px;       
+            }
+            #map {
+            font-family: Arial;
+            font-size:12px;
+            line-height:normal !important;
+            height:100%;
+            background:transparent;
+            z-index: 0;
+            position: absolute;
+            width: 100%;
+            }
+            .select{  
+            width: 80px !important;    
+            height: 10px;  
+            padding-right: 15px;
+            }  
+            .multiselect {  
+            width: 160px;  
+            height: 30px;
+            padding-right: 15px;
+            }  
+            .navigationHeader{
+            background-color: #fff;
+            padding-top: 0px;    
+            }
+            /* to undo twitter bootstrap */
+            .btn-custom-search {
+            background-color: hsl(214, 37%, 28%) !important;
+            background-repeat: repeat-x;
+            filter: progid:DXImageTransform.Microsoft.gradient(startColorstr="#7a99c1", endColorstr="#2c4361");
+            background-image: -khtml-gradient(linear, left top, left bottom, from(#7a99c1), to(#2c4361));
+            background-image: -moz-linear-gradient(top, #7a99c1, #2c4361);
+            background-image: -ms-linear-gradient(top, #7a99c1, #2c4361);
+            background-image: -webkit-gradient(linear, left top, left bottom, color-stop(0%, #7a99c1), color-stop(100%, #2c4361));
+            background-image: -webkit-linear-gradient(top, #7a99c1, #2c4361);
+            background-image: -o-linear-gradient(top, #7a99c1, #2c4361);
+            background-image: linear-gradient(#7a99c1, #2c4361);
+            border-color: #2c4361 #2c4361 hsl(214, 37%, 19.5%);
+            color: #fff !important;
+            text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.56);
+            -webkit-font-smoothing: antialiased;
+            }
+            .btn-custom {
+            background-color: hsl(195, 60%, 35%) !important;
+            background-repeat: repeat-x;
+            filter: progid:DXImageTransform.Microsoft.gradient(startColorstr="#2d95b7", endColorstr="#23748e");
+            background-image: -khtml-gradient(linear, left top, left bottom, from(#2d95b7), to(#23748e));
+            background-image: -moz-linear-gradient(top, #2d95b7, #23748e);
+            background-image: -ms-linear-gradient(top, #2d95b7, #23748e);
+            background-image: -webkit-gradient(linear, left top, left bottom, color-stop(0%, #2d95b7), color-stop(100%, #23748e));
+            background-image: -webkit-linear-gradient(top, #2d95b7, #23748e);
+            background-image: -o-linear-gradient(top, #2d95b7, #23748e);
+            background-image: linear-gradient(#2d95b7, #23748e);
+            border-color: #23748e #23748e hsl(195, 60%, 32.5%);
+            color: #fff !important;
+            text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.16);
+            -webkit-font-smoothing: antialiased;
+            }
+            #content {
+            margin-left: 5px;
+            }
+            .accordion-heading .accordion-toggle-small {
+            display: block;
+            padding: 4px 8px; /*8px 15px;*/
+            }
+            .accordion-inner-small {
+            padding: 4px 8px;  /*9px 15px;*/
+            border-top: 1px solid #e5e5e5;
+            }
+            .scrollDiv {
+            overflow-y: scroll;
+            display: inline-block;
+            float: none; /* Very important */
+            }
+            .progress .bar {
+            -webkit-transition: width 2s ease-in-out;
+            -moz-transition: width 2s ease-in-out;
+            -ms-transition: width 2s ease-in-out;
+            -o-transition: width 2s ease-in-out;
+            transition: width 2s ease-in-out;
+            }
+           
+            
+        </style>
+        <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key= AIzaSyB6P7S_yIXe3z4pQsUW9cNKkGFx_l7c8m8&sensor=true"></script>
+        <script type="text/javascript">
+            var j$=jQuery.noConflict();
+        var locations=[];
+        var map;
+        var customerIcon= {url: "{!$Resource.GoogleMap_green_icon}"};
+        var prospectIcon = {url: "{!$Resource.GoogleMap_gray_icon}"};  
+        var expiredIcon= {url: "{!$Resource.GoogleMap_red_icon}"};               
+        var SQLQuery=""; 
+        var showQuery;
+        function setQuery( ivalue)
+        {
+          showQuery=ivalue;
+        }
+        
+         
+        //Show Error Message when no data found 
+        var errorMsg = j$('#responseErrors').hide();
+       
+        <!-- ============================================================ -->
+            <!-- ========   Code to Generate Dynamic Query ================== --> 
+                <!-- ============================================================ -->
+                function printQueryonPage(text)
+                {
+                    document.getElementById('queryblock').innerHTML = text; 
+                }
+                function resetQuery()
+        {
+            SQLQuery="";
+        }
+        //Method to query Salesforce 
+        function runQuery()
+        { 
+            //reset Query to add filter from scratch
+            resetQuery();
+            //Field To be determined 
+            //if(!isBlank("Contract_Expires"))   
+            //    SQLQuery+=' AND District_Contract_End__c >= '+(getDocValue("Contract_Expires"))+' ';
+            //=================== Single Picklist  - Lena will import these in sandbox  ========================
+            //if(!isBlank("MDR_Priority__c"))
+            //  SQLQuery+=' AND MDR_Priority__c  = '+getDocValue("MDR_Priority__c");
+            //if(!isBlank("MDR_Focus__c"))
+            //  SQLQuery+=' AND MDR_Focus__c  = '+getDocValue("MDR_Focus__c");
+            //if(!isBlank("MDR_Reward__c"))
+            //  SQLQuery+=' AND MDR_Reward__c  = '+getDocValue("MDR_Reward__c");
+            //============================================================
+            //Lets built the query
+            // ================= MultiPickList =====================
+            if(!isBlank("Customer_Type"))
+                SQLQuery+=' AND Customer_Type__c IN '+"("+getMultiValuefromPicklist("Customer_Type")+")"+' ';
+            // ================= Range MultiPickList - Michael will provide these ranges =====================
+            //if(!isBlank("MDR_Enrollment__c"))
+            //    SQLQuery+=(getDocValue("MDR_Enrollment__c"))+' ';
+            // if(!isBlank("MDR_Title_I__c"))
+            //     SQLQuery+=getDocValue("MDR_Title_I__c");
+            if(!isBlank("MDR_Type__c"))
+                SQLQuery+=' AND MDR_Type__c IN '+"("+getMultiValuefromPicklist("MDR_Type__c")+")"+' ';
+            
+            
+            //============================================================
+            setQuery(SQLQuery);
+            searchAgain(SQLQuery);
+            j$('#queryChosen').Value =showQuery; 
+            animateProgressBar();
+            
+        }
+        //Method to receive multiValue from Picklist
+        function getMultiValuefromPicklist(fieldName)
+        {
+            var select1 = document.getElementById(fieldName);
+            var selected1 = [];
+            for (var i = 0; i < select1.length; i++) {
+                if (select1.options[i].selected) selected1.push(select1.options[i].value);
+            }
+            return  "'" + selected1.join("','") + "'";
+        }
+        //Get Value of document object 
+        function getDocValue(fieldName)
+        {
+            return document.getElementById(fieldName).value;
+        }
+        //Check if field is blank or nothing is chosen
+        function isBlank(fieldName)
+        {
+            if(document.getElementById(fieldName).value =="" || document.getElementById(fieldName).value =="None")
+                return true;
+            else
+                return false;
+        }
+        function getQueryStringValue(key, default_)
+        {
+            if (default_==null) default_="";
+            key = key.replace(/[\[]/,"\\\[").replace(/[\]]/,"\\\]");
+            var regex = new RegExp("[\\?&]"+key+"=([^&#]*)");
+            var qs = regex.exec(window.location.href);
+            if(qs == null)
+                return default_;
+            else
+                return qs[1];
+        }
+        <!-- ========================================= -->
+            <!-- ===========GeoCordinates Map Methods===== --> 
+                <!-- ========================================= -->
+                //Code to find geoLocation of user and dropping pin
+                function success(position)
+                {
+                    //GCoordinate(position.coords.latitude, position.coords.longitude,"" ,"");
+                    locations=[];
+                    map = new google.maps.Map(document.getElementById('map'), {
+                        mapTypeId: google.maps.MapTypeId.ROADMAP
+                    });                                                                                                                                  
+                    locations.push(
+                        new GCoordinate(position.coords.latitude,
+                                        position.coords.longitude,
+                                        "",
+                                        ""));        
+                    loadCLMaps();
+                } 
+                function GCoordinate(xValue, yValue, content,acctType) {            
+                    this.x=xValue;
+                    this.y=yValue;
+                    var iconToUse=customerIcon;
+                    var validDate;
+                    //Prospect Customer
+                    if(acctType=='Prospect')
+                    {                
+                        iconToUse=prospectIcon;
+                    }
+                    else if(acctType=='Expired')
+                    {                
+                        iconToUse=expiredIcon;
+                    }                
+                    this.marker=new google.maps.Marker({
+                        position: new google.maps.LatLng(this.x, this.y),
+                        icon: iconToUse,
+                        map: map,
+                        clcontent: content,
+                        animation: google.maps.Animation.DROP
+                    });
+                }
+        function loadCLMaps()
+        {                                
+            var  i;
+            var latlngbounds = new google.maps.LatLngBounds();
+            infoWindow = new google.maps.InfoWindow();
+            for (i = 0; i < locations.length; i++) {
+                var myobj = locations[i];
+                var mymarker = myobj.marker;
+                latlngbounds.extend(mymarker.position);
+                google.maps.event.addListener(mymarker, 'click', function(){
+                    infoWindow.setContent(this.clcontent); 
+                    infoWindow.open(map,this); 
+                    animation: google.maps.Animation.DROP
+                        });  
+            }
+            j$('#searchpane-loading').hide();                               
+            map.fitBounds(latlngbounds);
+        }  
+        
+        <!-- ========================================= -->
+            <!-- ===========This method decides what to show on map ===== --> 
+                <!-- ========================================= -->
+                
+                function initMap()
+                {
+                    setSearchDiv();
+                    
+                    //if id is not null then pass it,otherwise, if geolocation, use it, otherwise pass nothing  
+                    var id=getQueryStringValue('pid',null);
+                    if(id!="")
+                    {
+                        getAccounts(" AND (ParentId='" + id + "' OR Id='" + id + "')");
+                    }
+                    else if (navigator.geolocation) {
+                        
+                        navigator.geolocation.getCurrentPosition(function(position) {
+                            var nearbyRadius=j$("#Accounts_Nearby");
+                            if(nearbyRadius=null)
+                            {
+                                nearbyRadius=30;
+                            }   
+                            findNearbyAccounts(position.coords.latitude, position.coords.longitude);
+                        });
+                    }
+                    else
+                    {
+                        getAccounts("");         
+                    }
+                }      
+                google.maps.event.addDomListener(window, 'load', function () {
+                    initMap();
+                }); 
+        <!-- ========================================= -->
+            <!-- ===========Search Methods() ================== --> 
+                <!-- ========================================= -->
+                function setSearchDiv() {
+                    var divToDisplayOver=j$('#map');
+                    var pos = divToDisplayOver.offset();
+                    j$('#searchpane-loading').show().offset({ top: pos.top, left: pos.left}).width(divToDisplayOver.width()).height(divToDisplayOver.height());                
+                    j$('#loadingimage').offset({ top: (pos.top+(divToDisplayOver.height()/2)-30), left: (pos.left+(divToDisplayOver.width()/2)-150)});
+                    j$('#searchtext').offset({ top: (pos.top+(divToDisplayOver.height()/2)+10), left: (pos.left+(divToDisplayOver.width()/2)-40)});
+                    j$('#searchpane-loading').show();
+                }   
+                function searchAgain(newFilter)
+        {
+            setSearchDiv();
+            
+            getAccounts(newFilter);            
+        }                       
+        function getAccounts(additionalFilters) {
+            // Enable the visual refresh
+google.maps.visualRefresh = true;
+locations=[];
+            map = new google.maps.Map(document.getElementById('map'), {
+                mapTypeId: google.maps.MapTypeId.ROADMAP
+            });                 
+            Visualforce.remoting.Manager.invokeAction(
+                '{!$RemoteAction.GoogleMapControllerExtension.SearchAcccounts}',
+                additionalFilters, 
+                function(result, event){
+                    if (event.status) {
+                        var thelist='';
+                        var content='';
+                        //now add the header for the content
+                        content+='<thead><tr>' + wrapHTML('Name','TH') +
+                            wrapHTML('District','TH') +
+                            wrapHTML('Customer Type','TH') +
+                            wrapHTML('Contract End','TH') +
+                            wrapHTML('District Contract End','TH') +
+                            wrapHTML('Related Contacts','TH') +
+                            '</tr></thead>';                            
+                        for (var i = 0; i < result.length; i++) {
+                            var a = result[i];
+                            var description='';
+                            if(a.MDR_Account_Name__c)
+                            {
+                                description+=getAccountLink(a.MDR_Account_Name__c,a.Id) + "<br/>";
+                            }
+                            if(a.MDR_District_Name__c)
+                            {
+                                description+=getAccountLink(a.MDR_District_Name__c,a.ParentId) + "<br/>";
+                            }
+                            description+="Enrollment: " + a.MDR_Enrollment__c + "<br/>";
+                            description+="Contract End: " + getFormattedDate(a.Contract_End__c) + "<br/>";
+                            description+="Customer Type: " + a.Customer_Type__c+ "<br/>";
+                            description+=getRelatedContactListLink(a.Id) + "<br/>";
+                            locations.push(
+                                new GCoordinate(a.MDR_Geo_Location__Latitude__s,
+                                                a.MDR_Geo_Location__Longitude__s,
+                                                description,
+                                                a.Customer_Type__c));                                                                                                                   
+                            content+='<tr>' + getTD(getAccountLink(a.MDR_Account_Name__c,a.Id)) +
+                                getTD(getAccountLink(a.MDR_District_Name__c,a.ParentId)) +
+                                getTD(a.Customer_Type__c) +
+                                getTD(getFormattedDate(a.Contract_End__c)) +
+                                getTD(getFormattedDate(a.District_Contract_End__c)) +
+                                getTD(getRelatedContactListLink(a.Id)) +
+                                '</tr>';                            
+                        }
+                        if(result.length==0)
+                        {
+                            j$('#myModalLabel').html("there's no data");
+                            j$('#myModal').modal('show')();
+                        }
+                        else
+                        {
+                            loadCLMaps();
+                            createAccountList(content);
+                        }
+                    } else if (event.type === 'exception') {
+                        document.getElementById("responseErrors").innerHTML = 
+                            event.message + "<br/>\n<pre>" + event.where + "</pre>";
+                    } else {
+                        document.getElementById("responseErrors").innerHTML = event.message;
+                    }
+                }, 
+                {escape: true}
+            );
+        }
+        
+        //Find Account in nearby 30 miles radius 
+        function findNearbyAccounts(latitude,longitude ) {
+            // Enable the visual refresh
+google.maps.visualRefresh = true;
+            errorMsg.hide();
+            locations=[];
+            map = new google.maps.Map(document.getElementById('map'), {
+                mapTypeId: google.maps.MapTypeId.ROADMAP
+            });                 
+            Visualforce.remoting.Manager.invokeAction(
+                '{!$RemoteAction.GoogleMapControllerExtension.getNearbyAccounts}',
+                latitude, longitude, 
+                function(result, event){
+                    if (event.status) {
+                        var thelist='';
+                        var content='';
+                        //now add the header for the content
+                        content+='<thead><tr>' + wrapHTML('Name','TH') +
+                            wrapHTML('District','TH') +
+                            wrapHTML('Customer Type','TH') +
+                            wrapHTML('Contract End','TH') +
+                            wrapHTML('District Contract End','TH') +
+                            wrapHTML('Related Contacts','TH') +
+                            '</tr></thead>';                            
+                        
+                        for (var i = 0; i < result.length; i++) {
+                            var a = result[i];
+                            var description='';
+                            if(a.MDR_Account_Name__c)
+                            {
+                                description+=getAccountLink(a.MDR_Account_Name__c,a.Id) + "<br/>";
+                            }
+                            if(a.MDR_District_Name__c)
+                            {
+                                description+=getAccountLink(a.MDR_District_Name__c,a.ParentId) + "<br/>";
+                            }
+                            description+="Enrollment: " + a.MDR_Enrollment__c + "<br/>";
+                            description+="Contract End: " + getFormattedDate(a.Contract_End__c) + "<br/>";
+                            description+="Customer Type: " + a.Customer_Type__c+ "<br/>";
+                            description+=getRelatedContactListLink(a.Id) + "<br/>";
+                            
+                            locations.push(
+                                new GCoordinate(a.MDR_Geo_Location__Latitude__s,
+                                                a.MDR_Geo_Location__Longitude__s,
+                                                description,
+                                                a.Customer_Type__c));                                                                                                                   
+                            content+='<tr>' + getTD(getAccountLink(a.MDR_Account_Name__c,a.Id)) +
+                                getTD(getAccountLink(a.MDR_District_Name__c,a.ParentId)) +
+                                getTD(a.Customer_Type__c) +
+                                getTD(getFormattedDate(a.Contract_End__c)) +
+                                getTD(getFormattedDate(a.District_Contract_End__c)) +
+                                getTD(getRelatedContactListLink(a.Id)) +
+                                '</tr>';                            
+                        }
+                        if(result.length==0)
+                            errorMessage.show();
+                        loadCLMaps();
+                        createAccountList(content);
+                        
+                    } 
+                    //Sorry the data is not found  - added here but in notepad 
+                    else if (event.type === 'exception') {
+                        document.getElementById("responseErrors").innerHTML = 
+                            event.message + "<br/>\n<pre>" + event.where + "</pre>";
+                    } 
+                    // added here but in notepad
+                    else {
+                        document.getElementById("responseErrors").innerHTML = event.message;
+                    }
+                }, 
+                {escape: true}
+            );
+        }
+        
+        
+        
+        <!-- ========================================= -->
+            <!-- ==========UI Tweaks  Methods================== --> 
+                <!-- ========================================= -->
+                function showHideAccountList(theButton)
+                {
+                    var ad=j$('#accountDiv');
+                    var theButton=j$('#viewlistButton');
+                    var themap = j$('#mapCanvas');
+                    var sidebar = j$('#sidebar');
+                    var togglebar = j$("#toggleSidebar");
+                    if(ad.is(':visible'))
+                    {
+                        theButton.value='View Account List';
+                        ad.hide();
+                        themap.show();
+                        sidebar.hide();
+                        togglebar.hide();
+                        
+                    }
+                    else
+                    {
+                        theButton.value='Hide Account List';
+                        ad.show();
+                        themap.hide();
+                        sidebar.hide();
+                        togglebar.hide();
+                    }                
+                }
+                function createAccountList(theContent)
+        {
+            //first, hide the div to not take resources as the display will append rows live
+            var ad=j$('#accountDiv');
+            var currentlyShowingList=ad.is(':visible');
+            ad.hide();
+            var al=j$('#accountList');
+            if(al.length!=0)
+            {
+                al.remove();
+            }
+            al=j$('<table></table>').attr('id','accountList').addClass('table').addClass('table-hover').addClass('table-condensed').addClass('table-bordered');
+            ad.append(al);                
+            al.append(theContent);
+            if(currentlyShowingList)
+            {
+                ad.show();
+            }
+        }
+        function getTD(theColumn)
+        {               
+            return wrapHTML(theColumn,'TD');
+        }
+        function wrapHTML(theColumn,wrapper)
+        {
+            var toReturn='<' + wrapper + '>';
+            if(theColumn)
+            {
+                toReturn+=String(theColumn);
+            }
+            toReturn+='</' + wrapper + '>';
+            return toReturn;
+        }            
+        function getAccountLink(name,id)
+        {
+            var toReturn='';
+            if(name)
+            {
+                toReturn= "<a href='/" + id + "' target='_blank'>" + name + "</a>";
+            }
+            return toReturn;
+        }
+        function getRelatedContactListLink(id)
+        {
+            var toReturn='';
+            if(name)
+            {
+                toReturn= "<a href='/003?rlid=RelatedContactList&id=" + id + "' target='_blank'>Related Contacts</a>";
+            }
+            return toReturn;
+        }  
+        function getFormattedDate(theDate)
+        {
+            var toReturn='';
+            if(theDate)
+            {
+                var d = new Date(theDate);
+                toReturn=d.getMonth() + '/' + d.getDate() + '/' + d.getFullYear();
+            }   
+            return toReturn;         
+        }      
+        function printView()
+        {
+            var p=j$('#printIcon');
+            var m=j$('#map');
+            var b=j$('#cancelPrintButton');
+            j$('#cancelPrintButton').show();    
+            var tab= j$('#accountList');
+            if(m.is(':visible'))
+            {
+                b.show();
+                f.hide();
+                m.hide();
+                p.hide();
+                j$('#sidebar').hide();
+                
+                
+            }
+            else
+            {
+                b.show();
+                m.show();
+                p.hide();
+                tab.show();
+            }                
+        }
+        <!-- ========================================= -->
+            <!-- ===========Toggle Page With SideBar ===== --> 
+                <!-- ========================================= -->
+                j$.asm = {};
+        j$.asm.panels = 1;
+        function sidebar(panels) {
+            j$.asm.panels = panels;
+            if (panels === 1) {
+                j$('#content').removeClass('span9');
+                j$('#content').addClass('span12 no-sidebar');
+                j$('#content').addClass('z-index:-10');
+                j$('#toggleSidebar').removeClass('icon-hand-left icon-2x');
+                j$('#toggleSidebar').addClass('icon-hand-right icon-2x');
+                j$('#content').removeClass('span9');
+                j$('#SearchButtonBar').hide();
+                j$('#sidebar').hide();
+                //icon-chevron-left(panels);
+            } else if (panels === 2) {
+                j$('#content').removeClass('span12 no-sidebar');
+                j$('#content').addClass('span9');
+                j$('#sidebar').show();
+                j$('#SearchButtonBar').show();
+                j$('#toggleSidebar').removeClass('icon-hand-right icon-2x');
+                j$('#toggleSidebar').addClass('icon-hand-left icon-2x'); 
+            }
+            j$('#mapCanvas').width(j$('#mapCanvas').parent().width());
+            j$('#mapCanvas').height(j$(window).height());
+            j$('#sidebar').height(j$(window).height() - 50);
+        }
+        function ToggleSidebar()
+        {
+            if (j$.asm.panels === 1) {
+                sidebar(2);
+            } else {
+                sidebar(1);
+            }
+        }
+        // This method will take user back to Salesforce Account he/she came from 
+        function backtoSalesforce(){
+            var id=getQueryStringValue('id',null);
+            var pid = getQueryStringValue('pid', null);
+            var url = "https://cs12.salesforce.com/";
+            if(id!=null)
+            {
+                //return to Account use came from
+                url+=id;
+                window.location.replace= url;
+                window.location.href=url;
+                return true;
+            }
+            if(pid!=null)
+            {
+                //return to Account use came from
+                url+=pid;
+                window.location.href=url;
+                window.location.replace= url;
+                return true;
+            }
+            else
+            {
+                window.location.replace= url;
+                window.location.href=url;
+                return true;
+            }
+        }
+        //Change Button Text on Click
+        function buttonText()
+        {
+            j$('#Search').button();
+            j$('#Search').click(function() {
+                j$(this).button('loading');
+            });  
+        }
+        function Scenario1()
+        {
+            var sql='and billingstate=\'TX\'';
+            searchAgain(sql);
+        }
+        function Scenario2()
+        {
+            var sql='and billingstate=\'FL\'';
+            searchAgain(sql);
+        }
+        function Scenario3()
+        {
+            var sql='and billingstate=\'NY\'';
+            searchAgain(sql);
+        }
+        function Scenario4()
+        {
+            var sql='and billingstate=\'CA\'';
+            searchAgain(sql);
+        }
+        
+        function animateProgressBar()
+        {
+            j$('.progress .bar').each(function() {
+                var me = j$(this);
+                var perc = me.attr("data-percentage");
+                me.css('width', 0 +'%');
+                //TODO: left and right text handling
+                
+                var current_perc = 0;
+                
+                var progress = setInterval(function() {
+                    if (current_perc>=perc) {
+                        clearInterval(progress);
+                    } else {
+                        current_perc +=100;
+                        me.css('width', (current_perc)+'%');
+                    }
+                    
+                    me.text((current_perc)+'%');
+                    
+                }, 50);
+                
+            });  
+            
+        }
+        </script>
+    </head>
+     <body>
+        
+        
+        
+        <div class="container-fluid">
+          <div class="navbar navbar-inverse navbar-fixed-top">
+       <div class="navbar-inner">
+        
+            <a class="brand pull-left" href="https://cs12.salesforce.com">Google Sales Map</a>
+            <div class="nav-collapse">
+                <ul class="nav">
+                    <li class="active"> <button class="btn btn-info" id="viewlistButton" onclick="showHideAccountList(this);" value="View List"><i class="icon-white icon-th-list "></i> View List</button></li>
+                    <li class="active"><button class="btn btn-danger" onclick="window.location.reload();"><i class="icon-white icon-repeat"></i> Reload</button></li>       
+                    <li class="btn btn-inverse" onclick="backtoSalesforce();"><i class="icon-comment icon-cloud icon-1x"></i> Back to Salesforce </li>
+               </ul>
+                <ul class="nav pull-right">
+                    <li class="dropdown">
+                        <button class="btn btn-inverse" href="https://cs12.salesforce.com/{!$User.id}"><i class="icon-user"></i> {!$User.FirstName} {!$User.LastName}</button>
+                             <button class="btn btn-primary dropdown-toggle" data-toggle="dropdown" href="#">
+                            <span class="icon-caret-down"></span></button>
+                            <ul class="dropdown-menu">
+                            <li><a href="https://cs12.salesforce.com/secur/logout.jsp"><i class="icon-fixed-width icon-frown"></i>Log Out</a></li>
+                     </ul>  
+                    </li>    
+                </ul>
+            
+        </div>
+    </div>    
+</div>
+        </div>
+        <div class="inner_div" style="padding:40px">
+            <i class="icon-hand-right icon-2x" id="toggleSidebar" onclick="ToggleSidebar();"></i>
+        </div>  
+        <div class="container-fluid">
+            <div class="row-fluid">
+             <div class="span3 " id="sidebar" style="display:none;">
+                    <span id="SearchButtonBar" style="display:none;">
+                        <button class="btn btn-info active" data-loading-text="Searching..." id="search" onclick="runQuery();">
+                            <i class="icon-white icon-search"></i>Search</button>
+                    </span>
+                        
+                    <div class="scrollDiv">
+                        <div id="Scenarios">
+                            <div class="accordion" id="accordion2">
+                                <div class="accordion-group">
+                                    <div class="accordion-heading">
+                                        <a class="accordion-toggle" data-parent="#accordion2" data-toggle="collapse" href="#collapseOne" id="item1" onclick="Scenario1();">
+                                            Secenario 1: Show Texas Accounts </a>
+                                    </div>
+                                    <div class="accordion-body collapse" id="collapseOne">
+                                        <div class="accordion-inner">
+                                            Map will only account with enrollment greater than 1000
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="accordion-group">
+                                    <div class="accordion-heading">
+                                        <a class="accordion-toggle" data-parent="#accordion2" data-toggle="collapse" href="#collapseTwo" id="item2" onclick="Scenario2();"> Scenario 2 : Show Florida Accounts </a>
+                                    </div>
+                                    <div class="accordion-body collapse" id="collapseTwo">
+                                        <div class="accordion-inner">
+                                            Map will show accounts in Florida
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="accordion-group">
+                                    <div class="accordion-heading">
+                                        <a class="accordion-toggle" data-parent="#accordion2" data-toggle="collapse" href="#collapseThree" id="item3" onclick="Scenario3();">
+                                            Secenario 3: Show New York Accounts </a>
+                                    </div>
+                                    <div class="accordion-body collapse" id="collapseThree">
+                                        <div class="accordion-inner">
+                                            Map will only account in New York
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="accordion-group">
+                                    <div class="accordion-heading">
+                                        <a class="accordion-toggle" data-parent="#accordion2" data-toggle="collapse" href="#collapseFour" id="item4" onclick="Scenario4();">
+                                            Secenario 4: Show Arizona Accounts </a>
+                                    </div>
+                                    <div class="accordion-body collapse" id="collapseFour">
+                                        <div class="accordion-inner">
+                                            Map will only account in Arizona
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>    
+                        
+                        
+                        
+                        
+                        
+                        <label> Accounts Nearby </label>
+                        <select class="selectpicker" id="Accounts_Nearby">
+                            <option value="10">10 Miles</option>
+                            <option value="30">30 Miles</option>
+                            <option value="50">50 Miles</option>
+                            <option value="100">1000 Miles</option>
+                        </select>
+                        <label> MDR School Improvement </label>
+                        <select class="selectpicker" id="MDR_School_Improvement__c">
+                            <option>None</option>
+                            <option value="True">Yes</option>
+                            <option value="False">No</option>
+                        </select>
+                        <label> Customer Type </label>
+                        <select class="selectpicker" id="Customer_Type" multiple="true" size="3">
+                            <option>None</option>
+                            <option value="Customer">Current Customers</option>
+                            <option value="Prospect">Prospect Customers</option>
+                            <option value="Expired">Expired Customers</option>
+                        </select>
+                        <label>MDR Type</label> 
+                        <select class="multiselect" id="MDR_Type__c" multiple="true" size="3">
+                            <option value="School','County Center','Diocesan Office','Regional Center','State Department">Administrative offices</option>
+                            <option value="'Alternative Program','Alternative School'">Alternative School/Program</option>
+                            <option value="Bureau of Indian Affairs School">BIA School</option>
+                            <option value="Magnet School">Magnet School</option>
+                            <option value="District">District</option>
+                            <option value="Public School">Public School</option>
+                            <option value="County Operated School','County School','State Operated School','State School'">Private School</option>
+                        </select>
+                        <label>MDR Title 1 Funding</label>
+                        <select id="MDR_Title_I__c">
+                            <option value="MDR_Title_I__c">None</option>
+                            <option value="MDR_Title_I__c =0">$0</option>
+                            <option value="MDR_Title_I__c&gt;0 AND MDR_Title_I__c &lt;=150000 ">$1-$150,000</option>
+                            <option value="MDR_Title_I__c&gt;150000 AND MDR_Title_I__c &lt;=500000">$150,001-$500,000</option>
+                            <option value="MDR_Title_I__c&gt;500000 AND MDR_Title_I__c &lt;=2500000">$500,001-$2,500,000</option>
+                            <option value="MDR_Title_I__c&gt;2500000">$2,500,001+</option>
+                        </select>
+                        <label>MDR Category </label>
+                        <select class="multiselect" id="MDR_Category__c" multiple="true">
+                            <option value="Main','Military District ','Regular District','Special Ed District','Subdistrict">District</option>
+                            <option value="Elementry">Elementry School</option>
+                            <option value="JHS','Middle">Middle School</option>
+                            <option value="SHS">High School</option>
+                            <option value="Adult','Career/Ed Tech','Career/Tech Ed','Career/Tech Ed District','Local Education Agency','Special','Supervisory Union">Other</option>
+                        </select>
+                        <label>MDR School Improvement</label>
+                        <select id="MDR_School_Improvement__c">
+                            <option>None</option>
+                            <option value="True">Yes</option>
+                            <option value="False">No</option>
+                        </select>
+                        <label>Failing School</label>
+                        <select id="Failing_School">
+                            <option>None</option>
+                            <option value="True">Yes</option>
+                            <option value="False">No</option>
+                        </select>
+                        <label>MDR Special Education Funding </label>
+                        <select id="MDR_Sp_Ed_Fnd__c">
+                            <option>None</option>
+                            <option value=" AND MDR_Sp_Ed_Fnd__c &lt;=0 ">$0</option>
+                            <option value=" and mdr_sp_ed_fnd__c&gt;0 AND MDR_Sp_Ed_Fnd__c &lt;=250000 ">$1-$250,000</option>
+                            <option value=" and mdr_sp_ed_fnd__c&gt;250000 AND MDR_Sp_Ed_Fnd__c &lt;=500000 ">$250,001-$500,000</option>
+                            <option value=" and mdr_sp_ed_fnd__c&gt;500000 AND MDR_Sp_Ed_Fnd__c &lt;=1000000 ">$500,001-$1,000,000</option>
+                            <option value=" and mdr_sp_ed_fnd__c&gt;1000001 ">$1,000,001+</option>
+                        </select>
+                        <label>MDR Reward</label>
+                        <select id="MDR_Reward__c">
+                            <option>None</option>
+                            <option value="True">Yes</option>
+                            <option value="False">No</option>
+                        </select>
+                        <label>MDR Focus</label>
+                        <select id="MDR_Focus__c">
+                            <option>None</option>
+                            <option value="True">Yes</option>
+                            <option value="False">No</option>
+                        </select>
+                        <label>MDR Priority</label>
+                        <select id="MDR_Priority__c">
+                            <option>None</option>
+                            <option value="True">Yes</option>
+                            <option value="False">No</option>
+                        </select>
+                    </div>
+                </div>
+                
+                
+                
+                <div id="mapCanvas">
+                    <div class="span12" id="content">
+                        <div id="map" style="width: 100%; height: 100%;"></div>
+                    </div>
+                </div>
+                
+                
+                
+                <div id="accountDiv" style="display:none">
+                    <img alt="Click to Print" id="printIcon" onclick="printView()" src="/resource/1368636553000/GraphicsPack/32/fatcow/farmfresh/printer.png" title="Click to Print" />
+                    <button  id="cancelPrintButton"  class="btn btn-inverse"  onclick="showHideAccountList(this);" style="display:none"><i class="icon-print"></i> Done Printing</button>
+                     
+                </div>
+                <div aria-hidden="true" aria-labelledby="myModalLabel" class="modal hide fade" id="myModal" role="dialog" tabindex="-1">
+                    <div class="modal-header">
+                        <h3 id="myModalLabel">
+                            Data Filter You set doesn't match any record
+                        </h3>
+                    </div>
+                    <div class="modal-body">
+                    </div>
+                    <div class="modal-footer">
+                        <button aria-hidden="true" class="btn" data-dismiss="modal">Close</button>
+                        <button class="btn btn-primary" onClick="window.location.reload()">Retry Again</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        
+        
+        <div class="loading" id="searchpane-loading">
+            <img alt="searching" height="30" id="loadingimage" src="/resource/1368639812000/loadingGif" style="vertical-align:middle" />
+            <span id="searchtext">Loading map...</span>
+        </div>
+    </body>
+</apex:page>
