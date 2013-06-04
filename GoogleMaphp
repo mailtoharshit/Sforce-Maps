@@ -311,12 +311,12 @@
                     else if (navigator.geolocation) {
                         
                         navigator.geolocation.getCurrentPosition(function(position) {
-                            var nearbyRadius=j$("#Accounts_Nearby");
+                            var nearbyRadius=j$('#Accounts_Nearby');
                             if(nearbyRadius=null)
                             {
                                 nearbyRadius=30;
                             }   
-                            findNearbyAccounts(position.coords.latitude, position.coords.longitude);
+                            findNearbyAccounts(position.coords.latitude, position.coords.longitude, nearbyRadius);
                         });
                     }
                     else
@@ -405,8 +405,9 @@ locations=[];
                             createAccountList(content);
                         }
                     } else if (event.type === 'exception') {
-                        document.getElementById("responseErrors").innerHTML = 
-                            event.message + "<br/>\n<pre>" + event.where + "</pre>";
+                      j$('#myModalLabel').html("there's no data");
+                        //document.getElementById("responseErrors").innerHTML = 
+                        //    event.message + "<br/>\n<pre>" + event.where + "</pre>";
                     } else {
                         document.getElementById("responseErrors").innerHTML = event.message;
                     }
@@ -416,7 +417,7 @@ locations=[];
         }
         
         //Find Account in nearby 30 miles radius 
-        function findNearbyAccounts(latitude,longitude ) {
+        function findNearbyAccounts(latitude,longitude,Radius ) {
             // Enable the visual refresh
 google.maps.visualRefresh = true;
             errorMsg.hide();
@@ -426,7 +427,7 @@ google.maps.visualRefresh = true;
             });                 
             Visualforce.remoting.Manager.invokeAction(
                 '{!$RemoteAction.GoogleMapControllerExtension.getNearbyAccounts}',
-                latitude, longitude, 
+                latitude, longitude,Radius, 
                 function(result, event){
                     if (event.status) {
                         var thelist='';
@@ -477,8 +478,9 @@ google.maps.visualRefresh = true;
                     } 
                     //Sorry the data is not found  - added here but in notepad 
                     else if (event.type === 'exception') {
-                        document.getElementById("responseErrors").innerHTML = 
-                            event.message + "<br/>\n<pre>" + event.where + "</pre>";
+                    j$('#myModalLabel').html("there's no data");
+                       // document.getElementById("responseErrors").innerHTML = 
+                        //    event.message + "<br/>\n<pre>" + event.where + "</pre>";
                     } 
                     // added here but in notepad
                     else {

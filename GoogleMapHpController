@@ -32,7 +32,7 @@ public with sharing class GoogleMapControllerExtension {
     
     
     @RemoteAction
-        public static List<Account> getNearbyAccounts(Decimal latitude, Decimal longitude) {
+        public static List<Account> getNearbyAccounts(Decimal latitude, Decimal longitude, string Radius) {
             String q = sqlTemplate;
             //if(BillCity!=NULL)
             //{
@@ -40,7 +40,7 @@ public with sharing class GoogleMapControllerExtension {
            // }
             q += ' AND DISTANCE(mdr_geo_location__c, GEOLOCATION( ';
             q += String.valueOf(latitude) + ', ' + String.valueOf(longitude);
-            q += ' ), \'mi\') < 30';
+            q += ' ), \'mi\') < Radius';
              return Database.query(q);                
         }       
     
